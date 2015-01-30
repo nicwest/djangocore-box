@@ -58,6 +58,9 @@ if [ ! -e /usr/lib/python2.7/_sysconfigdata_nd.py ]; then
     sudo ln -s /usr/lib/python2.7/plat-*/_sysconfigdata_nd.py /usr/lib/python2.7/
 fi
 
+# Install pip
+sudo apt-get install -y python2.7-dev
+
 # Install each specified version of Python
 for VERSION in ${VERSIONS[@]}; do
   if [ ! -d "/usr/bin/python${VERSION}/" ]; then
@@ -65,31 +68,20 @@ for VERSION in ${VERSIONS[@]}; do
   fi
 done
 
-
-# Install pip
-wget http://python-distribute.org/distribute_setup.py &> /dev/null
-sudo python2.7 distribute_setup.py
-rm distribute_setup.py
-rm distribute*.tar.gz
-wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py &> /dev/null
-sudo python2.7 get-pip.py
-rm get-pip.py
-
-# Set up pip cache so we don't have to download the same packages multiple times
-echo "export PIP_DOWNLOAD_CACHE=\$HOME/.pip_download_cache" >> $HOME/.profile
+wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py -O $HOME/get-pip.py
+sudo python2.7 $HOME/get-pip.py
 
 # Set up virtualenvwrapper
-sudo /usr/local/bin/pip install virtualenv==1.7.2 virtualenvwrapper  # virtualenv > 1.7.2 doesn't support Python 2.4
+sudo pip install virtualenv==12.0.5 virtualenvwrapper==4.3.2  
 echo "export WORKON_HOME=\$HOME/.virtualenvs"  >> $HOME/.profile
 echo "source /usr/local/bin/virtualenvwrapper.sh" >> $HOME/.profile
 mkdir /home/vagrant/.virtualenvs
 
-
-
 # Create the virtualenvs
 for VERSION in ${VERSIONS[@]}; do
   /usr/local/bin/virtualenv $HOME/.virtualenvs/py${VERSION} --system-site-packages --python=/usr/bin/python${VERSION}
-  PIP_DOWNLOAD_CACHE=$HOME/.pip_download_cache $HOME/.virtualenvs/py${VERSION}/bin/pip install -r $ROOT_PATH/requirements/requirements-${VERSION}.txt
+  $HOME/.virtualenvs/py${VERSION}/bin/python $HOME/get-pip.py
+  $HOME/.virtualenvs/py${VERSION}/bin/pip install -r $ROOT_PATH/requirements/requirements-${VERSION}.txt
 
   # Create symlinks and aliases for the various types of database settings
   DATABASES=( 'spatialite' 'mysql' 'postgresql' 'postgis' )
@@ -102,5 +94,6 @@ for VERSION in ${VERSIONS[@]}; do
   echo "alias runtests${VERSION}-sqlite='PYTHONPATH=/django $HOME/.virtualenvs/py${VERSION}/bin/python /django/tests/runtests.py --settings=test_sqlite'"  >> $HOME/.profile
 done
 
+rm get-pip.py
 # Create a flag file to prevent this script from being run in subsequent vagrant-up's.
-touch $HOME/.python-installed
+#touch $HOME/.python-installed
